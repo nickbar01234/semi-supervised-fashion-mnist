@@ -49,9 +49,11 @@ class Decoder(Layer):
 class Losses:
     def __init__(self):
         self.mse = tf.keras.losses.MeanSquaredError()
-    
+        self.cross_entropy = tf.keras.losses.SparseCategoricalCrossentropy()
+
     @tf.function
-    def computeLoss(self, ground_truth: tf.Tensor, prediction: tf.Tensor):
-        loss = self.mse(ground_truth, prediction)
-        return loss
+    def computeLoss(self, x_train: tf.Tensor, x_prediction: tf.Tensor, x_label: tf.Tensor, x_predicted_label: tf.Tensor):
+        mse = self.mse(x_train, x_prediction)
+        cross_entropy = self.cross_entropy(x_label, x_predicted_label)
+        return mse, cross_entropy
     

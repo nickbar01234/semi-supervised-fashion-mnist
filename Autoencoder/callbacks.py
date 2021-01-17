@@ -24,7 +24,7 @@ class Callback:
             except:
                 print("Failed to open a history log with a checkpoint provided")
         else:
-            self.history = {"train_loss": [], "valid_loss": []}
+            self.history = {"train_mse": [], "valid_mse": [], "train_entropy": [], "valid_entropy": []}
 
         self.patience = patience 
         self.wait = 0
@@ -40,28 +40,35 @@ class Callback:
             self.train_progbar.update(
                 step + 1,
                 [
-                    ("Train", train)
+                    ("train_mse", train[0]),
+                    ("train_entropy", train[1])
                 ]
             )
         elif validation != None:
             self.valid_progbar.update(
                 step + 1,
                 [
-                    ("Valid", validation)
+                    ("valid_mse", validation[0]),
+                    ("valid_entropy", validation[1])
                 ]
             )
 
     def on_epoch_end(self, epoch: int, train: float, validation: float, model: tf.keras.models.Model):
         self.model = model 
-        tmp = [train, validation]
+
+        tmp = [train[0], validation[0], train[1], validation[1]]
         for index, key in enumerate(self.history):
             self.history[key].append(tmp[index])
         
         if epoch % 10 == 0:
-            fig, ax = plt.subplots(1, 1, figsize = (12, 12))
-            ax.plot(np.arange(1, epoch + 1, 1), self.history["train_loss"], c = 'r', label = "train loss")
-            ax.plot(np.arange(1, epoch + 1, 1), self.history["valid_loss"], c = 'b', label = "valid_loss")
-            ax.legend(loc = "right")
+            fig, ax = plt.subplots(1, 2, figsize = (12, 12))
+            ax[0].plot(np.arange(1, epoch + 1, 1), self.history["train_mse"], c = 'r', label = "train mse")
+            ax[0].plot(np.arange(1, epoch + 1, 1), self.history["valid_mse"], c = 'b', label = "valid_mse")
+            
+            
+            ax[1].plot(np.arange(1, epoch + 1, 1), self.history["train_entropy"], c = 'r', label = "train_entropy")
+            ax[1].plot(np.arange(1, epoch + 1, 1), self.history["valid_entropy"], c = 'b', label = "valid_entropy")
+
             plt.gca().invert_yaxis()
             plt.show()
         
@@ -78,10 +85,10 @@ class Callback:
 
     def earlyStopping(self, epoch: int):
         if self.best_loss == None:
-            self.best_loss = self.history["valid_loss"][-1]
+            self.best_loss = self.history["valid_mse"][-1]
             return self.model
         
-        current_loss = self.history["valid_loss"][-1]
+        current_loss = self.history["valid_mse"][-1]
         if current_loss < self.best_loss:
             print(f"For epoch {epoch}, loss {current_loss} improved from {self.best_loss}")
             self.best_loss = current_loss 
@@ -106,14 +113,31 @@ class Callback:
         return optimizer 
 
     @staticmethod
-    def _plot_image(predictions: tf.Tensor, ground_truth: tf.Tensor):
-        predictions = np.stack(predictions).reshape(-1, 28, 28)
-        ground_truth = np.stack(ground_truth).reshape(-1, 28, 28)
-        sample = np.random.randint(0, predictions.shape[0], size = 1)
+    def _plot_image(x_train: tf.Tensor, predicted_image: tf.Tensor, x_label: tf.Tensor, predicted_label: tf.Tensor):
+
+        label = {
+            0: "T-shirt",
+            1: "Trouser",
+            2: "Pullover",
+            3: "Dress",
+            4: "Coat",
+            5: "Sandal",
+            6: "Shirt",
+            7: "Sneaker",
+            8: "Bag",
+            9: "Ankle boot"
+        }
+
+        x_train = np.stack(x_train).reshape(-1, 28, 28)
+        predicted_image = np.stack(predicted_image).reshape(-1, 28, 28)
+        x_label = x_label.numpy()
+        predicted_label = predicted_label.numpy()
+
+        sample = np.random.randint(0, predicted_image.shape[0], size = 1)
 
         fig, ax = plt.subplots(1, 2, figsize = (10, 10))
-        ax[0].imshow(predictions[sample].reshape(28, 28), cmap = "gray")
-        ax[0].set_title("Prediction")
+        ax[0].imshow(predicted_image[sample].reshape(28, 28), cmap = "gray")
+        ax[0].set_title(f"Created image predicted {label[np.argmax(predicted_label[sample])]} for {label[x_label]}")
 
         ax[1].imshow(ground_truth[sample].reshape(28, 28), cmap = "gray")
         ax[1].set_title("Ground Truth")

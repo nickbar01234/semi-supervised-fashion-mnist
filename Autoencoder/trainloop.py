@@ -65,32 +65,36 @@ class Train:
                 
     @tf.function
     def train_step(self):
-        avg_loss = []
+        avg_loss = [[], []]
         for step, image in enumerate(self.train):
-            x, y = image 
+            x_train, x_prediction, x_label = image 
             with tf.GradientTape() as tape:
-                prediction = self.model(x, pipeline = "autoencoder", training = True)
-                loss = self.loss.computeLoss(y, prediction)
-            gradients = tape.gradient(loss, self.model.trainable_variables)
-            self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
-            self.callback._progbar(step = step, train = loss)
-            avg_loss.append(loss)
-        return tf.reduce_mean(avg_loss).numpy()
+                predicted_image, predicted_label = self.model(x_train, pipeline = "autoencoder", training = True)
+                mse, cross_entropy = self.loss.computeLoss(x_train, predicted_image, x_label, predicted_label)
+                gradients = tape.gradient([mse, cross_entropy], self.model.trainable_variables)
+                self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+
+            self.callback._progbar(step = step, train = (mse, cross_entropy))
+            avg_loss[0].append(mse)
+            avg_loss[1].append(cross_entropy)
+
+        return [tf.reduce_mean(loss).numpy() for loss in avg_loss]
     
     @tf.function
     def valid_step(self, epoch):
-        avg_loss = []
+        avg_loss = [[], []]
         for step, image in enumerate(self.validation):
-            x, y = image 
-            prediction = self.model(x, pipeline = "autoencoder", training = False)
-            loss = self.loss.computeLoss(y, prediction)
-            self.callback._progbar(step = step, validation = loss)
-            avg_loss.append(loss)
+            x_train, x_prediction, x_label = image 
+            predicted_image, predicted_label = self.model(x_train, pipeline = "autoencoder", training = False)
+            mse, cross_entropy = self.loss.computeLoss(x_train, predicted_image, x_label, predicted_label)
+            self.callback._progbar(step = step, validation = (mse, cross_entropy))
+            avg_loss[0].append(mse)
+            avg_loss[1].append(cross_entropy)
         
-        if epoch % 10 == 0:
-            self.callback._plot_image(prediction, y)
+        # if epoch % 10 == 0:
+        self.callback._plot_image(x_train, predicted_image, x_label, predicted_label)
 
-        return tf.reduce_mean(avg_loss).numpy() 
+        return [tf.reduce_mean(loss).numpy() for loss in avg_loss]
 
   
             

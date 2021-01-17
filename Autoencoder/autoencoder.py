@@ -19,6 +19,7 @@ class AutoEncoder(Model):
         self.encoder5 = Encoder(64, 1, 1, name = "encoder5")
         #(-1, 3, 3, 64)
         self.flatten = Flatten()
+        self.dense = Dense(10, activation = "softmax")
         #(-1 * 576)
         self.decoder1 = Decoder(16, 2, 1, name = "decoder1")
         #(-1, 5, 5, 16)
@@ -36,14 +37,16 @@ class AutoEncoder(Model):
         encoded = self.encoder4(encoded)
         encoded = self.encoder5(encoded)
         
+        latent_space = self.flatten(encoded)
+        predicted_label = self.dense(latent_space)
+
         if pipeline == "classifcation":
-            output = self.flatten(encoded)
-            return output
-        
+            return latent_space 
+  
         decoded = self.decoder1(encoded)
         decoded = self.decoder2(decoded)
         decoded = self.decoder3(decoded)
         output = self.decoder4(decoded)
-        return output 
+        return output, predicted_label 
         
    

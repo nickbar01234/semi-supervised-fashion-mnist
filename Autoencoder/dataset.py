@@ -5,58 +5,67 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split 
 
 class Dataset:
-    def __init__(self, X: np.array, validation: bool = True, y: np.array = None, *args, **kwargs):
+    def __init__(self, X: np.array, y: np.array, validation: bool = True, *args, **kwargs):
         self.validation = validation 
-        if self.validation:
-            train, validation = train_test_split(X, test_size = 5000, random_state = 42)
-            train_x, train_y = self._transform(train)
-            self.train_x, self.train_y = train_x, train_y
+        self.X = X.copy()
+        self.y_train = y 
 
-            valid_x, valid_y = self._transform(validation)
-            self.valid_x, self.valid_y = valid_x, valid_y
-        else:
-            train_x, train_y = self._transform(X)
-            self.train_x, self.train_y = self.train_x, train_y
-
-    def dataset(self, show_sample: bool = False, batch_size: int = 32, buffer_size: int = 1024, *args, **kwargs):
+    def dataset(self, show_sample: bool = False, batch_size: int = 32, shuffle: int = 32, *args, **kwargs):
+        self._pipeline()
         if show_sample:
-            self._showSample()
-
+            self._sample()
+        
         autotune = tf.data.experimental.AUTOTUNE
-        if self.validation:
-            train = tf.data.Dataset.from_tensor_slices((self.train_x, self.train_y)).batch(batch_size, drop_remainder = True)
-            train = train.shuffle(buffer_size).prefetch(autotune)
 
-            validation = tf.data.Dataset.from_tensor_slices((self.valid_x, self.valid_y)).batch(batch_size, drop_remainder = True)
-            validation = validation.prefetch(autotune)
+        train = tf.data.Dataset.from_tensor_slices((self.x_train, self.x_prediction, self.y_train))
+        train = train.batch(batch_size, drop_remainder = True).shuffle(shuffle).prefetch(autotune)
+        if self.validation:
+            validation = tf.data.Dataset.from_tensor_slices((self.valid_x, self.valid_prediction, self.valid_y))
+            validation = validation.batch(batch_size, drop_remainder = True).prefetch(autotune)
             return train, validation 
         else:
-            ds = tf.data.Dataset.from_tensor_slices((self.train_x, self.train_y)).batch(batch_size, drop_remainder = True)
-            ds = ds.shuffle(buffer_size).prefetch(autotune)
-            return ds 
-    
-    def _transform(self, x: np.array):
+            return train 
+
+    def _pipeline(self):   
+        if self.validation:
+            x_train, x_test, y_train, y_test = train_test_split(self.X, self.y_train, test_size = 5000, random_state = 42)
+            x_train, x_prediction = self._transform(x_train)
+            self.x_train, self.x_prediction = x_train, x_prediction 
+            self.y_train = y_train
+
+            valid_x, valid_prediction = self._transform(x_test)
+            self.valid_x, self.valid_prediction = valid_x, valid_prediction 
+            self.valid_y = y_test
+        else: 
+            x_train, x_prediction = self._transform(self.X)
+            self.x_train, self.x_prediction = x_train, x_prediction 
+
+    @staticmethod 
+    def _transform(x: np.array):
         y = x.copy()
 
         for i in range(len(x)):
             image = x[i]
-            blur = cv2.GaussianBlur(image, (3, 3), 0)
+            try:
+                blur = cv2.GaussianBlur(image, (3, 3), 0)
+            except:
+                print(image)
             _, threshold = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
-            x[i] = threshold.reshape(28, 28, 1)
-
+            x[i] = threshold
+        
         for i in range(len(y)):
             image = y[i]
             blur = cv2.GaussianBlur(image, (1, 1), 0)
             _, threshold = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
             dilated = cv2.dilate(threshold, (2, 2), iterations = 1)
             edge = cv2.Canny(dilated, 0, 255)
-            y[i] = edge.reshape(28, 28, 1)
+            y[i] = edge
+        
+        return x.astype("float32").reshape(-1, 28, 28, 1) / 255.0, y.astype("float32").reshape(-1, 28, 28, 1) / 255.0
 
-        return x.astype("float32") / 255.0, y.astype("Float32") / 255.0 
-
-    def _showSample(self):
-        sampled = np.random.randint(0, self.train_y.shape[0], size = 30)
-        augmented_image = self.train_y[sampled]
+    def _sample(self):
+        sampled = np.random.randint(0, self.x_prediction.shape[0], size = 30)
+        augmented_image = self.x_prediction[sampled]
         
         plt.figure(figsize=(20,20))
         columns = 10
