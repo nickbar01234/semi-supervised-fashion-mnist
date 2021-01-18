@@ -36,7 +36,7 @@ class AutoEncoder(Model):
         encoded = self.encoder4(encoded)
         encoded = self.encoder5(encoded)
         
-        if pipeline == "classifcation":
+        if pipeline == "classification":
             output = self.flatten(encoded)
             return output
         

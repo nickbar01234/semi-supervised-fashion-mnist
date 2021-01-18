@@ -42,7 +42,7 @@ class Dataset:
             image = x[i]
             blur = cv2.GaussianBlur(image, (3, 3), 0)
             _, threshold = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
-            x[i] = threshold.reshape(28, 28, 1)
+            x[i] = threshold
 
         for i in range(len(y)):
             image = y[i]
@@ -50,9 +50,9 @@ class Dataset:
             _, threshold = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
             dilated = cv2.dilate(threshold, (2, 2), iterations = 1)
             edge = cv2.Canny(dilated, 0, 255)
-            y[i] = edge.reshape(28, 28, 1)
+            y[i] = edge
 
-        return x.astype("float32") / 255.0, y.astype("Float32") / 255.0 
+        return x.reshape(-1, 28, 28, 1).astype("float32") / 255.0, y.reshape(-1, 28, 28, 1).astype("Float32") / 255.0 
 
     def _showSample(self):
         sampled = np.random.randint(0, self.train_y.shape[0], size = 30)
