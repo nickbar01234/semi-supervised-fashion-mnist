@@ -1,6 +1,6 @@
 # Classification using AutoEncoder
 
-This is a toy project for practicing implementing tensorflow, image preprocessing, and sckit-learn on FashionMnist dataset. I also implemented some aspects of tensorflow train loop, such as customizing callbacks and train loop. To clone this project type `https://github.com/nickbar01234/semi-supervised-fashion-mnist`
+This is a toy project for practicing implementing tensorflow, image preprocessing, and sckit-learn on FashionMnist dataset. I also implemented some aspects of tensorflow train loop, such as customizing callbacks and train loop. To begin type on command line `clone https://github.com/nickbar01234/semi-supervised-fashion-mnist`
 
 The general idea I had was that to predict a piece of gray-scale piece of clothing, a model only needs to know about the positional space on the Cartesian coordinates. To further reinforce this idea, I decided to train an auto encoder. 
 
